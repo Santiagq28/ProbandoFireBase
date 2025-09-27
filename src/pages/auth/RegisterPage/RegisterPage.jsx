@@ -1,4 +1,73 @@
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { auth, db } from "../../../firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
+
+
 function RegisterPage() {
+  
+  const navigate = useNavigate();
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [formData, setFormData] = useState({
+    nombre: "", correo: "", clave: "", confirmarClave: ""
+  });
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  }; 
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const {
+      nombre, correo, clave, confirmarClave
+    } = formData;
+
+    // Validaciones
+    if(
+      !nombre || !correo || !clave || !confirmarClave
+    ){
+      return alert("Todos los campos son obligatorios");
+    }
+    if(clave.length < 6){
+      return alert("La contraseña debe tener más caracteres");
+    }
+    if(clave !== confirmarClave){
+      return alert("Las contraseñas no son iguales");
+    }
+    try{
+      const emaillower = correo.toLocaleLowerCase();
+
+
+      //Crea usuario para el servicio de autenticación de firebase
+      const userMethod = await createUserWithEmailAndPassword(auth, emaillower, clave) ;
+      const user = userMethod.user;
+
+      // Guardar datos en firestore
+      await setDoc (doc(db, "usuarios", user.uid), {
+        uid: user.uid, 
+        nombre, correo: emaillower, estado: "pendiente", rol: "visitante", creado: new Date(), metodo: "clave"
+      });
+
+      alert("Registrado😁👍! Usario Creado con Éxito");
+      navigate("/login")
+    }catch (error){
+      console.error("Error de registro: ", error);
+
+      if(error.code === "auth/email-already-in-use"){
+        alert("Correo en uso, Debe ingresar con otro correo 😒");
+      }
+    }
+  }
+
   return (
     <section className="flex items-center justify-center min-h-screen bg-[#f0f0f0]">
       <div className="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20">
@@ -15,7 +84,7 @@ function RegisterPage() {
           REGISTRARSE
         </h2>
 
-        <form className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5">
           
           <label className=" w-full input input-bordered rounded-2xl border-black flex items-center gap-2 bg-white/10 text-black placeholder-black">
             <svg
@@ -35,6 +104,7 @@ function RegisterPage() {
               </g>
             </svg>
             <input
+              name="nombre" 
               type="text"
               required
               placeholder="Username"
@@ -43,6 +113,8 @@ function RegisterPage() {
               maxLength="30"
               title="Only letters, numbers or dash"
               className="grow bg-transparent focus:outline-none"
+              value={formData.nombre}
+              onChange={handleChange}
             />
           </label>
 
@@ -65,10 +137,13 @@ function RegisterPage() {
               </g>
             </svg>
             <input
+              name="correo" 
               type="email"
               placeholder="example@gmail.com"
               required
               className="grow bg-transparent focus:outline-none"
+              value={formData.correo}
+              onChange={handleChange}
             />
           </label>
 
@@ -91,14 +166,25 @@ function RegisterPage() {
               </g>
             </svg>
             <input
-              type="password"
+              name="clave" 
+              type={showPassword ? "text" : "password"}
               required
               placeholder="Password"
-              minLength="8"
-              pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-              title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
+              //minLength="8"
+              //pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+              //title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
               className="grow bg-transparent focus:outline-none"
+              value={formData.clave}
+              onChange={handleChange}
             />
+            <button 
+              type="button"
+              className="p-2 rounded hover:cursor-pointer"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FaEyeSlash/>: <FaEye/>}
+
+            </button>
           </label>
 
            <label className="w-full input input-bordered rounded-2xl border-black flex items-center gap-2 bg-white/10 text-black placeholder-black">
@@ -119,14 +205,25 @@ function RegisterPage() {
               </g>
             </svg>
             <input
-              type="password"
+              name="confirmarClave" 
+              type={showConfirmPassword ? "text" : "password"}
               required
               placeholder="Confirm Password"
-              minLength="8"
-              pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
-              title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
+              //minLength="8"
+              //pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}"
+              //title="Must be more than 8 characters, including number, lowercase letter, uppercase letter"
               className="grow bg-transparent focus:outline-none"
+              value={formData.confirmarClave}
+              onChange={handleChange}
             />
+            <button 
+              type="button"
+              className="p-2 rounded hover:cursor-pointer"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {showConfirmPassword ? <FaEyeSlash/>: <FaEye/>}
+
+            </button>
           </label>
 
           
